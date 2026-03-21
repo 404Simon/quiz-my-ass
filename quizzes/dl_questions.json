@@ -1,0 +1,215 @@
+{
+  "id": "dl-questions",
+  "title": "Deep Learning Math & Concepts",
+  "description": "Converted from dl_questions.md",
+  "questions": [
+    {
+      "id": "q1",
+      "prompt": "You are designing a fully connected layer with input dimension N=1024 and output dimension M=512. How many learnable parameters (weights + biases) does this layer contain?",
+      "choices": [
+        "524,288 (1024 x 512)",
+        "524,800 (1024 x 512 + 512)",
+        "525,312 (1024 x 512 + 1024)",
+        "1,536 (1024 + 512)"
+      ],
+      "answerIndex": 1,
+      "hint": "Parameters = weights + biases. Bias count equals number of outputs.",
+      "explanation": "A dense layer has N x M weights plus M biases. 1024 x 512 = 524,288; add 512 biases to get 524,800."
+    },
+    {
+      "id": "q2",
+      "prompt": "Consider the sigmoid activation function. In which scenario does vanishing gradient typically occur during backpropagation?",
+      "choices": [
+        "When the input x is close to 0",
+        "When weights are large, making |x| large (saturation)",
+        "When the learning rate is too high",
+        "When the network uses residual connections"
+      ],
+      "answerIndex": 1,
+      "hint": "Think about where the sigmoid derivative is near 0.",
+      "explanation": "The sigmoid derivative is near 0 when the input is large in magnitude (saturation), which kills gradients."
+    },
+    {
+      "id": "q3",
+      "prompt": "Given a learning rate schedule eta_t = eta_0 * exp(-k t), which statement correctly describes d(eta_t)/dt?",
+      "choices": [
+        "It is constant",
+        "It is proportional to the initial learning rate only",
+        "It is proportional to the current learning rate: d(eta_t)/dt = -k eta_t",
+        "It is proportional to 1 / t"
+      ],
+      "answerIndex": 2,
+      "hint": "Differentiate an exponential decay.",
+      "explanation": "Derivative of eta_0 e^{-k t} is -k eta_0 e^{-k t} = -k eta_t."
+    },
+    {
+      "id": "q4",
+      "prompt": "Which expression correctly defines the KL divergence D_KL(P || Q) for discrete distributions?",
+      "choices": [
+        "Sum P(x) ln(Q(x) / P(x))",
+        "Sum P(x) ln(P(x) / Q(x))",
+        "Sum P(x) (ln P(x) + ln Q(x))",
+        "-Sum P(x) ln Q(x)"
+      ],
+      "answerIndex": 1,
+      "hint": "KL is expected log ratio under P.",
+      "explanation": "D_KL(P||Q) = E_P[ln P - ln Q] = Sum P(x) ln(P(x)/Q(x))."
+    },
+    {
+      "id": "q5",
+      "prompt": "Input image size is 16 x 16, kernel 4 x 4, padding 1, stride 2. What are the output spatial dimensions?",
+      "choices": [
+        "6 x 6",
+        "7 x 7",
+        "8 x 8",
+        "9 x 9"
+      ],
+      "answerIndex": 2,
+      "hint": "Use O = floor((I - K + 2P) / S) + 1.",
+      "explanation": "(16 - 4 + 2) / 2 + 1 = 14 / 2 + 1 = 8."
+    },
+    {
+      "id": "q6",
+      "prompt": "Input is 32 x 32, output is 16 x 16 with kernel 4 x 4. Which stride and padding produce this?",
+      "choices": [
+        "Stride 1, Padding 0",
+        "Stride 2, Padding 0",
+        "Stride 2, Padding 1",
+        "Stride 1, Padding 2"
+      ],
+      "answerIndex": 2,
+      "hint": "Plug each option into the convolution output formula.",
+      "explanation": "(32 - 4 + 2) / 2 + 1 = 30 / 2 + 1 = 16."
+    },
+    {
+      "id": "q7",
+      "prompt": "What is the primary effect of a transposed convolution with stride s > 1?",
+      "choices": [
+        "Downsampling (reduces spatial resolution)",
+        "Upsampling (increases spatial resolution)",
+        "Global average pooling",
+        "Acts as a 1 x 1 bottleneck"
+      ],
+      "answerIndex": 1,
+      "hint": "Transposed convs are often used for upsampling.",
+      "explanation": "A transposed convolution with stride > 1 increases spatial resolution."
+    },
+    {
+      "id": "q8",
+      "prompt": "What is the main purpose of 1 x 1 convolutions in Inception modules?",
+      "choices": [
+        "Increase receptive field size",
+        "Bottleneck dimensionality reduction before expensive convolutions",
+        "Introduce non-linearity without changing dimensions",
+        "Perform global average pooling"
+      ],
+      "answerIndex": 1,
+      "hint": "Think about reducing channels before costly operations.",
+      "explanation": "1 x 1 convolutions reduce channel dimensionality, cutting compute before larger kernels."
+    },
+    {
+      "id": "q9",
+      "prompt": "What does a saliency map visualize in deep learning?",
+      "choices": [
+        "Weights of the first convolutional layer",
+        "Gradient of class score with respect to input pixels",
+        "Feature maps of the deepest layer",
+        "Uncertainty of the model's prediction"
+      ],
+      "answerIndex": 1,
+      "hint": "It highlights which pixels influence the class score most.",
+      "explanation": "Saliency maps show d(score)/d(input), indicating pixel importance."
+    },
+    {
+      "id": "q10",
+      "prompt": "Which statement is true about LSTM vs GRU?",
+      "choices": [
+        "GRU has more parameters because it has more gates",
+        "LSTM keeps separate cell state c_t and hidden state h_t; GRU merges them",
+        "GRU cannot learn long-term dependencies",
+        "LSTM uses only reset and update gates"
+      ],
+      "answerIndex": 1,
+      "hint": "LSTM has a distinct cell state.",
+      "explanation": "LSTM maintains both c_t and h_t; GRU combines them into a single state."
+    },
+    {
+      "id": "q11",
+      "prompt": "How is perplexity related to cross-entropy loss in language modeling?",
+      "choices": [
+        "PP = H^2",
+        "PP = 2^H (or e^H depending on log base)",
+        "PP = 1 / H",
+        "PP = log(H)"
+      ],
+      "answerIndex": 1,
+      "hint": "Perplexity is an exponential of entropy.",
+      "explanation": "Perplexity is the exponential of cross entropy: 2^H (or e^H)."
+    },
+    {
+      "id": "q12",
+      "prompt": "In a VAE, if the KL term dominates too much, what is posterior collapse?",
+      "choices": [
+        "Perfect reconstruction with discontinuous latent space",
+        "Encoder produces z independent of x; decoder ignores z",
+        "Gradients explode and training diverges",
+        "Model becomes a deterministic autoencoder"
+      ],
+      "answerIndex": 1,
+      "hint": "The latent code stops carrying input information.",
+      "explanation": "Posterior collapse occurs when the encoder outputs the prior regardless of input, so the decoder ignores z."
+    },
+    {
+      "id": "q13",
+      "prompt": "What is the role of anchor boxes in object detection architectures?",
+      "choices": [
+        "Initialize convolutional weights",
+        "Predefined reference boxes for predicting offsets",
+        "Crop input images before inference",
+        "Replace non-maximum suppression"
+      ],
+      "answerIndex": 1,
+      "hint": "They provide reference shapes at each location.",
+      "explanation": "Anchor boxes are predefined boxes (scales/aspect ratios) that the network predicts offsets from."
+    },
+    {
+      "id": "q14",
+      "prompt": "Which condition ensures convergence of Q-learning to optimal Q-values?",
+      "choices": [
+        "Learning rate must be constant (alpha = 1)",
+        "Policy must be purely greedy",
+        "All state-action pairs visited infinitely often and Robbins-Monro learning rate conditions",
+        "Reward must be deterministic"
+      ],
+      "answerIndex": 2,
+      "hint": "Think about exploration and learning rate schedules.",
+      "explanation": "Convergence requires sufficient exploration and diminishing learning rates: sum alpha_t = infinity, sum alpha_t^2 < infinity."
+    },
+    {
+      "id": "q15",
+      "prompt": "In ResNet, if the optimal mapping is identity, how does a residual block formulate this?",
+      "choices": [
+        "It learns the identity matrix directly",
+        "It drives nonlinear weights to zero so H(x) = F(x) + x becomes x",
+        "It uses max pooling to pass the maximum value",
+        "It removes the activation function"
+      ],
+      "answerIndex": 1,
+      "hint": "Residual formulation is H(x) = F(x) + x.",
+      "explanation": "If F(x) -> 0, then H(x) = x, so the block represents identity."
+    },
+    {
+      "id": "q16",
+      "prompt": "Given TP = 80, FP = 20, FN = 20, what is the F1-score?",
+      "choices": [
+        "0.6",
+        "0.7",
+        "0.8",
+        "0.9"
+      ],
+      "answerIndex": 2,
+      "hint": "Precision = TP/(TP+FP), Recall = TP/(TP+FN).",
+      "explanation": "Precision = 0.8 and Recall = 0.8, so F1 = 2 * 0.8 * 0.8 / (0.8 + 0.8) = 0.8."
+    }
+  ]
+}
