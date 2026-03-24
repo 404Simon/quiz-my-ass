@@ -54,7 +54,6 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
   const [explanationShownByQuestion, setExplanationShownByQuestion] = createSignal<Record<number, boolean>>({});
 
   let quizSelect: SelectRenderable | undefined;
-  let answerSelect: SelectRenderable | undefined;
 
   const quiz = createMemo(() => props.quizzes[selectedQuizIndex()]);
   const questionCount = createMemo(() => quiz()?.questions.length ?? 0);
@@ -63,12 +62,11 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
   const hintShown = createMemo(() => hintShownByQuestion()[currentQuestionIndex()] ?? false);
   const explanationShown = createMemo(() => explanationShownByQuestion()[currentQuestionIndex()] ?? false);
 
-  createEffect(() => {
+  const currentCursor = createMemo(() => {
     const index = currentQuestionIndex();
     const savedCursor = cursorByQuestion()[index];
     const savedAnswer = answers()[index];
-    const nextCursor = savedAnswer ?? savedCursor ?? 0;
-    answerSelect?.setSelectedIndex(nextCursor);
+    return savedCursor ?? savedAnswer ?? 0;
   });
 
   const score = createMemo(() => {
@@ -132,6 +130,18 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
   function handleQuizKeys(key: { name: string; shift?: boolean }) {
     if (key.name === "q" || key.name === "escape") {
       setScreen("list");
+      return;
+    }
+    if (key.name === "j" || key.name === "down") {
+      moveAnswerCursor(1);
+      return;
+    }
+    if (key.name === "k" || key.name === "up") {
+      moveAnswerCursor(-1);
+      return;
+    }
+    if (key.name === "enter" || key.name === "return" || key.name === "linefeed" || key.name === "space") {
+      selectCurrentAnswer();
       return;
     }
     if (key.name === "h" || key.name === "left" || key.name === "p") {
@@ -202,12 +212,44 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
 
   function handleAnswerSelect(index: number) {
     const qIndex = currentQuestionIndex();
+    setCursorByQuestion((prev) => ({ ...prev, [qIndex]: index }));
     setAnswers((prev) => ({ ...prev, [qIndex]: index }));
     setExplanationShownByQuestion((prev) => ({ ...prev, [qIndex]: true }));
   }
 
   function handleQuizChange(index: number) {
     setSelectedQuizIndex(index);
+  }
+
+  function moveAnswerCursor(delta: number) {
+    const q = question();
+    if (!q) return;
+    const total = q.choices.length;
+    if (!total) return;
+    let next = currentCursor() + delta;
+    if (next < 0) next = total - 1;
+    if (next >= total) next = 0;
+    handleAnswerChange(next);
+  }
+
+  function selectCurrentAnswer() {
+    const q = question();
+    if (!q) return;
+    const index = Math.min(Math.max(0, currentCursor()), q.choices.length - 1);
+    handleAnswerSelect(index);
+  }
+
+  function choiceFgColor(index: number) {
+    const q = question();
+    const answeredIndex = currentAnswerIndex();
+    if (!q || answeredIndex === undefined) return undefined;
+    if (index === q.answerIndex) return "#22c55e";
+    if (answeredIndex !== q.answerIndex && index === answeredIndex) return "#ef4444";
+    return undefined;
+  }
+
+  function choiceBgColor(index: number) {
+    return currentCursor() === index ? "#1f2937" : "black";
   }
 
   function questionStatus() {
@@ -318,30 +360,23 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
                 {quiz()?.title} · Question {currentQuestionIndex() + 1} / {questionCount()}
               </text>
               <text wrapMode="word">{question()?.prompt}</text>
-              <select
-                ref={(el) => (answerSelect = el)}
-                options={(question()?.choices ?? []).map((choice, index) => ({
-                  name: `${choiceLabel(index)} ${choice}`,
-                  description: "",
-                }))}
-                selectedIndex={cursorByQuestion()[currentQuestionIndex()] ?? currentAnswerIndex() ?? 0}
-                focused
-                showDescription={false}
-                wrapSelection
-                showScrollIndicator
-                itemSpacing={1}
-                keyBindings={[
-                  { name: "j", action: "move-down" },
-                  { name: "k", action: "move-up" },
-                  { name: "down", action: "move-down" },
-                  { name: "up", action: "move-up" },
-                  { name: "enter", action: "select-current" },
-                  { name: "space", action: "select-current" },
-                ]}
-                onChange={(index) => handleAnswerChange(index)}
-                onSelect={(index) => handleAnswerSelect(index)}
-                height="100%"
-              />
+              <box flexDirection="column" gap={1} height="100%">
+                <For each={question()?.choices ?? []}>
+                  {(choice, index) => (
+                    <box
+                      backgroundColor={choiceBgColor(index())}
+                      paddingX={1}
+                      paddingY={0}
+                      width="100%"
+                    >
+                      <text fg={choiceFgColor(index())}>
+                        {currentCursor() === index() ? "▶ " : "  "}
+                        {choiceLabel(index())} {choice}
+                      </text>
+                    </box>
+                  )}
+                </For>
+              </box>
             </box>
           </box>
 
