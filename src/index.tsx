@@ -9,7 +9,7 @@ type QuizQuestion = {
   id: string;
   prompt: string;
   choices: string[];
-  answerIndex: number;
+  answerIndices: number[];
   hint?: string;
   explanation?: string;
 };
@@ -48,24 +48,27 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
   const [screen, setScreen] = createSignal<"list" | "quiz">("list");
   const [selectedQuizIndex, setSelectedQuizIndex] = createSignal(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = createSignal(0);
-  const [answers, setAnswers] = createSignal<Record<number, number>>({});
+  const [answers, setAnswers] = createSignal<Record<number, number[]>>({});
   const [cursorByQuestion, setCursorByQuestion] = createSignal<Record<number, number>>({});
   const [hintShownByQuestion, setHintShownByQuestion] = createSignal<Record<number, boolean>>({});
   const [explanationShownByQuestion, setExplanationShownByQuestion] = createSignal<Record<number, boolean>>({});
+  const [submittedByQuestion, setSubmittedByQuestion] = createSignal<Record<number, boolean>>({});
+  const [activeQuizId, setActiveQuizId] = createSignal<string | undefined>(undefined);
 
   let quizSelect: SelectRenderable | undefined;
 
   const quiz = createMemo(() => props.quizzes[selectedQuizIndex()]);
   const questionCount = createMemo(() => quiz()?.questions.length ?? 0);
   const question = createMemo(() => quiz()?.questions[currentQuestionIndex()]);
-  const currentAnswerIndex = createMemo(() => answers()[currentQuestionIndex()]);
+  const currentAnswerIndices = createMemo(() => answers()[currentQuestionIndex()] ?? []);
   const hintShown = createMemo(() => hintShownByQuestion()[currentQuestionIndex()] ?? false);
   const explanationShown = createMemo(() => explanationShownByQuestion()[currentQuestionIndex()] ?? false);
+  const submitted = createMemo(() => submittedByQuestion()[currentQuestionIndex()] ?? false);
 
   const currentCursor = createMemo(() => {
     const index = currentQuestionIndex();
     const savedCursor = cursorByQuestion()[index];
-    const savedAnswer = answers()[index];
+    const savedAnswer = answers()[index]?.[0];
     return savedCursor ?? savedAnswer ?? 0;
   });
 
@@ -74,13 +77,16 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
     if (!quizValue) return 0;
     let total = 0;
     for (const [idx, answer] of Object.entries(answers())) {
+      if (!submittedByQuestion()[Number(idx)]) continue;
       const q = quizValue.questions[Number(idx)];
-      if (q && q.answerIndex === answer) total += 1;
+      if (q && isCorrectAnswer(q, answer)) total += 1;
     }
     return total;
   });
 
-  const answeredCount = createMemo(() => Object.keys(answers()).length);
+  const answeredCount = createMemo(
+    () => Object.values(submittedByQuestion()).filter((value) => value).length,
+  );
   const renderer = useRenderer();
 
   useKeyboard((key) => {
@@ -140,8 +146,16 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
       moveAnswerCursor(-1);
       return;
     }
-    if (key.name === "enter" || key.name === "return" || key.name === "linefeed" || key.name === "space") {
-      selectCurrentAnswer();
+    if (key.name === "space") {
+      if (isMultiSelect()) {
+        toggleCurrentChoice();
+      } else {
+        submitCurrentAnswer();
+      }
+      return;
+    }
+    if (key.name === "enter" || key.name === "return" || key.name === "linefeed") {
+      submitCurrentAnswer();
       return;
     }
     if (key.name === "h" || key.name === "left" || key.name === "p") {
@@ -175,7 +189,12 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
   }
 
   function startQuiz() {
-    if (!props.quizzes.length) return;
+    const nextQuiz = quiz();
+    if (!nextQuiz) return;
+    if (activeQuizId() !== nextQuiz.id) {
+      resetQuiz();
+      setActiveQuizId(nextQuiz.id);
+    }
     setScreen("quiz");
     setCurrentQuestionIndex(0);
   }
@@ -185,6 +204,7 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
     setCursorByQuestion({});
     setHintShownByQuestion({});
     setExplanationShownByQuestion({});
+    setSubmittedByQuestion({});
     setCurrentQuestionIndex(0);
   }
 
@@ -213,8 +233,7 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
   function handleAnswerSelect(index: number) {
     const qIndex = currentQuestionIndex();
     setCursorByQuestion((prev) => ({ ...prev, [qIndex]: index }));
-    setAnswers((prev) => ({ ...prev, [qIndex]: index }));
-    setExplanationShownByQuestion((prev) => ({ ...prev, [qIndex]: true }));
+    setAnswers((prev) => ({ ...prev, [qIndex]: [index] }));
   }
 
   function handleQuizChange(index: number) {
@@ -232,19 +251,42 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
     handleAnswerChange(next);
   }
 
-  function selectCurrentAnswer() {
+  function toggleCurrentChoice() {
+    if (!isMultiSelect()) return;
     const q = question();
     if (!q) return;
+    const qIndex = currentQuestionIndex();
     const index = Math.min(Math.max(0, currentCursor()), q.choices.length - 1);
-    handleAnswerSelect(index);
+    setAnswers((prev) => {
+      const current = prev[qIndex] ?? [];
+      const exists = current.includes(index);
+      const next = exists ? current.filter((value) => value !== index) : [...current, index];
+      return { ...prev, [qIndex]: next };
+    });
+    setSubmittedByQuestion((prev) => ({ ...prev, [qIndex]: false }));
+    setExplanationShownByQuestion((prev) => ({ ...prev, [qIndex]: false }));
+  }
+
+  function submitCurrentAnswer() {
+    const q = question();
+    if (!q) return;
+    const qIndex = currentQuestionIndex();
+    const cursorIndex = Math.min(Math.max(0, currentCursor()), q.choices.length - 1);
+    if (!isMultiSelect()) {
+      handleAnswerSelect(cursorIndex);
+    } else if (!answers()[qIndex]?.length) {
+      handleAnswerSelect(cursorIndex);
+    }
+    setSubmittedByQuestion((prev) => ({ ...prev, [qIndex]: true }));
+    setExplanationShownByQuestion((prev) => ({ ...prev, [qIndex]: true }));
   }
 
   function choiceFgColor(index: number) {
     const q = question();
-    const answeredIndex = currentAnswerIndex();
-    if (!q || answeredIndex === undefined) return undefined;
-    if (index === q.answerIndex) return "#22c55e";
-    if (answeredIndex !== q.answerIndex && index === answeredIndex) return "#ef4444";
+    if (!q || !submitted()) return undefined;
+    const answersForQuestion = currentAnswerIndices();
+    if (q.answerIndices.includes(index)) return "#22c55e";
+    if (answersForQuestion.includes(index)) return "#ef4444";
     return undefined;
   }
 
@@ -254,17 +296,25 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
 
   function questionStatus() {
     const q = question();
-    const answerIndex = currentAnswerIndex();
-    if (!q || answerIndex === undefined) return "Unanswered";
-    return q.answerIndex === answerIndex ? "Correct" : "Incorrect";
+    if (!q || !submitted()) return "Unanswered";
+    return isCorrectAnswer(q, currentAnswerIndices()) ? "Correct" : "Incorrect";
   }
 
   function answerStatusText() {
     const q = question();
-    const answerIndex = currentAnswerIndex();
-    if (!q || answerIndex === undefined) return "Choose an answer to reveal the explanation.";
-    const label = q.answerIndex === answerIndex ? "Correct" : "Incorrect";
-    return `${label}. Correct answer: ${choiceLabel(q.answerIndex)}.`;
+    if (!q || !submitted()) {
+      return isMultiSelect()
+        ? "Select one or more answers, then press Enter to submit."
+        : "Press Enter to submit the highlighted answer.";
+    }
+    const correct = isCorrectAnswer(q, currentAnswerIndices());
+    const label = correct ? "Correct" : "Incorrect";
+    return `${label}. Correct answer: ${choiceListLabel(q.answerIndices)}.`;
+  }
+
+  function isMultiSelect() {
+    const q = question();
+    return q ? q.answerIndices.length > 1 : false;
   }
 
   return (
@@ -371,6 +421,7 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
                     >
                       <text fg={choiceFgColor(index())}>
                         {currentCursor() === index() ? "▶ " : "  "}
+                        {isMultiSelect() && (currentAnswerIndices().includes(index()) ? "[x]" : "[ ]")}{" "}
                         {choiceLabel(index())} {choice}
                       </text>
                     </box>
@@ -411,7 +462,7 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
                   <text attributes={TextAttributes.DIM}>{answerStatusText()}</text>
                 </Show>
                 <Show when={!explanationShown()}>
-                  <text attributes={TextAttributes.DIM}>Press e after answering to review.</text>
+                  <text attributes={TextAttributes.DIM}>Press e to toggle explanation.</text>
                 </Show>
               </box>
             </box>
@@ -431,7 +482,7 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
           List: j/k move · enter start · q quit
         </text>
         <text attributes={TextAttributes.DIM}>
-          Quiz: j/k select · h/l/n/p prev/next · gg/G jump · ? hint · e explain · r reset · q back
+          Quiz: j/k select · space toggle (multi) · enter submit · h/l/n/p prev/next · gg/G jump · ? hint · e explain · r reset · q back
         </text>
       </box>
     </box>
@@ -440,6 +491,21 @@ function App(props: { quizzes: Quiz[]; errors: string[] }) {
 
 function choiceLabel(index: number) {
   return String.fromCharCode(65 + index) + ")";
+}
+
+function choiceListLabel(indices: number[]) {
+  return indices.map(choiceLabel).join(", ");
+}
+
+function isCorrectAnswer(question: QuizQuestion, selections: number[]) {
+  const selected = normalizeSelection(selections);
+  const correct = normalizeSelection(question.answerIndices);
+  if (selected.length !== correct.length) return false;
+  return selected.every((value, index) => value === correct[index]);
+}
+
+function normalizeSelection(values: number[]) {
+  return Array.from(new Set(values)).sort((a, b) => a - b);
 }
 
 function loadQuizzes(): LoadResult {
@@ -521,9 +587,23 @@ function normalizeQuestion(raw: any, index: number, quizTitle: string, errors: s
     return null;
   }
 
-  const answerIndex = Number.isInteger(raw.answerIndex) ? raw.answerIndex : -1;
-  if (answerIndex < 0 || answerIndex >= choices.length) {
-    errors.push(`Quiz ${quizTitle} question ${index + 1} has an invalid answerIndex.`);
+  const rawAnswerIndices = Array.isArray(raw.answerIndices) ? raw.answerIndices : null;
+  const answerIndices = rawAnswerIndices
+    ? rawAnswerIndices.map((value: any) => Number(value)).filter((value) => Number.isInteger(value))
+    : [];
+  const answerIndex = Number.isInteger(raw.answerIndex) ? raw.answerIndex : null;
+
+  if (!answerIndices.length && answerIndex !== null) {
+    answerIndices.push(answerIndex);
+  }
+
+  const normalizedAnswerIndices = normalizeSelection(answerIndices);
+  const hasInvalidAnswer = !normalizedAnswerIndices.length || normalizedAnswerIndices.some((value) => {
+    return value < 0 || value >= choices.length;
+  });
+
+  if (hasInvalidAnswer) {
+    errors.push(`Quiz ${quizTitle} question ${index + 1} has invalid answerIndices.`);
     return null;
   }
 
@@ -531,7 +611,7 @@ function normalizeQuestion(raw: any, index: number, quizTitle: string, errors: s
   const explanation = typeof raw.explanation === "string" ? raw.explanation.trim() : undefined;
   const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${slugify(quizTitle)}-q${index + 1}`;
 
-  return { id, prompt, choices, answerIndex, hint, explanation };
+  return { id, prompt, choices, answerIndices: normalizedAnswerIndices, hint, explanation };
 }
 
 function slugify(value: string) {
