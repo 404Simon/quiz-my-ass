@@ -1,0 +1,94 @@
+{
+  "id": "demo-all-features",
+  "title": "Demo Quiz: All Features",
+  "description": "Demo set for keyboard flow, single and multi-select, hints, explanations, and clipboard copy.",
+  "questions": [
+    {
+      "id": "single-basic",
+      "prompt": "Single choice question. Which key starts selected quiz from list screen?",
+      "choices": [
+        "enter",
+        "x",
+        "tab",
+        "ctrl+s"
+      ],
+      "answerIndex": 0,
+      "hint": "List footer shows start key.",
+      "explanation": "In list screen, enter starts selected quiz. Space also works."
+    },
+    {
+      "id": "multi-select",
+      "prompt": "Multi-select question. Pick all keys that move between questions in quiz screen.",
+      "choices": [
+        "h",
+        "l",
+        "left",
+        "right",
+        "n",
+        "p"
+      ],
+      "answerIndices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "hint": "Think vim keys and arrow aliases.",
+      "explanation": "App supports h/l and left/right, plus p/n aliases for prev/next."
+    },
+    {
+      "id": "no-hint",
+      "prompt": "Question without hint field. Toggle hint and see fallback text.",
+      "choices": [
+        "Fallback says no hint available",
+        "Hint panel crashes",
+        "Hint panel hides forever"
+      ],
+      "answerIndex": 0,
+      "explanation": "If hint missing, UI shows fallback text: No hint available."
+    },
+    {
+      "id": "no-explanation",
+      "prompt": "Question without explanation field. Submit answer then toggle explanation.",
+      "choices": [
+        "UI shows no explanation provided",
+        "UI cannot render panel",
+        "Answer status disappears"
+      ],
+      "answerIndex": 0,
+      "hint": "Explanation panel has fallback too."
+    },
+    {
+      "id": "eight-choices",
+      "prompt": "Valid choice count is 2 to 8. This question uses max supported choices.",
+      "choices": [
+        "choice A",
+        "choice B",
+        "choice C",
+        "choice D",
+        "choice E",
+        "choice F",
+        "choice G",
+        "choice H"
+      ],
+      "answerIndex": 7,
+      "hint": "Loader accepts at most 8 choices.",
+      "explanation": "Quiz loader validates each question with 2-8 choices."
+    },
+    {
+      "id": "clipboard-feature",
+      "prompt": "Which key combo copies current question text and options to clipboard?",
+      "choices": [
+        "yy",
+        "cc",
+        "ctrl+y",
+        "shift+y"
+      ],
+      "answerIndex": 0,
+      "hint": "Double key press within short interval.",
+      "explanation": "App listens for double y and shows toast with clipboard result."
+    }
+  ]
+}
