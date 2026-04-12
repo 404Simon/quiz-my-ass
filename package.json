@@ -7,7 +7,7 @@
     "dev": "bun run --watch src/index.tsx"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "^1.3.12"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -15,9 +15,9 @@
   "dependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-typescript": "^7.28.5",
-    "@opentui/core": "^0.1.88",
-    "@opentui/solid": "^0.1.88",
-    "babel-preset-solid": "1.9.9",
-    "solid-js": "1.9.9"
+    "@opentui/core": "^0.1.97",
+    "@opentui/solid": "^0.1.97",
+    "babel-preset-solid": "1.9.10",
+    "solid-js": "1.9.11"
   }
 }
