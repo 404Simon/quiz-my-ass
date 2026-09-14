@@ -1,6 +1,6 @@
 import type { SelectRenderable } from "@opentui/core";
 import { TextAttributes } from "@opentui/core";
-import { useKeyboard, useRenderer } from "@opentui/solid";
+import { useKeyboard } from "@opentui/solid";
 import { createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { copyQuestionTextToClipboard } from "./clipboard";
 import { ListScreen } from "./components/list-screen";
@@ -12,6 +12,7 @@ import type { Quiz } from "./types";
 type AppProps = {
   quizzes: Quiz[];
   errors: string[];
+  onQuit: () => void;
 };
 
 type KeyInput = {
@@ -40,8 +41,6 @@ export function App(props: AppProps) {
 
   let quizSelect: SelectRenderable | undefined;
   let toastTimeout: ReturnType<typeof setTimeout> | undefined;
-  const renderer = useRenderer();
-
   onCleanup(() => {
     if (toastTimeout) clearTimeout(toastTimeout);
   });
@@ -111,7 +110,7 @@ export function App(props: AppProps) {
   let lastYTime = 0;
 
   function quitApp() {
-    renderer.destroy();
+    props.onQuit();
   }
 
   function isDoubleG() {

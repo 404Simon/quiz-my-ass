@@ -7,14 +7,24 @@ const loadResult = loadQuizzes();
 
 async function main() {
   const renderer = await createCliRenderer();
-  render(() => <App quizzes={loadResult.quizzes} errors={loadResult.errors} />, renderer);
 
   function quit() {
     renderer.destroy();
+    process.exit(0);
   }
 
-  process.on("SIGINT", quit);
-  process.on("SIGTERM", quit);
+  render(
+    () => <App quizzes={loadResult.quizzes} errors={loadResult.errors} onQuit={quit} />,
+    renderer,
+  );
+
+  // TypeScript 7 currently loses Node's signal overloads when Bun augments Process.
+  const onSignal = process.on.bind(process) as unknown as (
+    signal: NodeJS.Signals,
+    listener: () => void,
+  ) => NodeJS.Process;
+  onSignal("SIGINT", () => quit());
+  onSignal("SIGTERM", () => quit());
 }
 
 main();
