@@ -5,6 +5,7 @@ import { createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { copyQuestionTextToClipboard } from "./clipboard";
 import { ListScreen } from "./components/list-screen";
 import { QuizScreen } from "./components/quiz-screen";
+import { SettingsScreen } from "./components/settings-screen";
 import { Toast } from "./components/toast";
 import { choiceLabel, choiceListLabel, isCorrectAnswer } from "./quiz-utils";
 import type { Quiz } from "./types";
@@ -28,7 +29,10 @@ type ToastState = {
 };
 
 export function App(props: AppProps) {
-  const [screen, setScreen] = createSignal<"list" | "quiz">("list");
+  const [screen, setScreen] = createSignal<"list" | "quiz" | "settings">("list");
+  const [settingsReturnScreen, setSettingsReturnScreen] = createSignal<"list" | "quiz">("list");
+  const [shuffleAnswers, setShuffleAnswers] = createSignal(true);
+  const [choiceOrderByQuestion, setChoiceOrderByQuestion] = createSignal<Record<number, number[]>>({});
   const [selectedQuizIndex, setSelectedQuizIndex] = createSignal(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = createSignal(0);
   const [answers, setAnswers] = createSignal<Record<number, number[]>>({});
@@ -48,6 +52,11 @@ export function App(props: AppProps) {
   const quiz = createMemo(() => props.quizzes[selectedQuizIndex()]);
   const questionCount = createMemo(() => quiz()?.questions.length ?? 0);
   const question = createMemo(() => quiz()?.questions[currentQuestionIndex()]);
+  const currentChoiceOrder = createMemo(() => {
+    const q = question();
+    if (!q) return [];
+    return choiceOrderByQuestion()[currentQuestionIndex()] ?? q.choices.map((_, index) => index);
+  });
   const currentAnswerIndices = createMemo(() => answers()[currentQuestionIndex()] ?? []);
   const hintShown = createMemo(() => hintShownByQuestion()[currentQuestionIndex()] ?? false);
   const explanationShown = createMemo(() => explanationShownByQuestion()[currentQuestionIndex()] ?? false);
@@ -57,7 +66,10 @@ export function App(props: AppProps) {
     const index = currentQuestionIndex();
     const savedCursor = cursorByQuestion()[index];
     const savedAnswer = answers()[index]?.[0];
-    return savedCursor ?? savedAnswer ?? 0;
+    const savedAnswerPosition = savedAnswer === undefined
+      ? undefined
+      : currentChoiceOrder().indexOf(savedAnswer);
+    return savedCursor ?? (savedAnswerPosition === -1 ? undefined : savedAnswerPosition) ?? 0;
   });
 
   const score = createMemo(() => {
@@ -77,7 +89,7 @@ export function App(props: AppProps) {
   );
 
   const headerLine = createMemo(() => {
-    if (screen() === "quiz") {
+    if (screen() === "quiz" || (screen() === "settings" && settingsReturnScreen() === "quiz")) {
       return `Quiz My Ass · ${currentQuestionIndex() + 1}/${questionCount()} · score ${score()}/${questionCount()}`;
     }
     return `Quiz My Ass · ${props.quizzes.length} quizzes`;
@@ -85,8 +97,10 @@ export function App(props: AppProps) {
 
   const footerLine = createMemo(() =>
     screen() === "list"
-      ? "List: j/k move · enter start · gg/G jump · q quit"
-      : "Quiz: j/k move · space toggle/select · enter submit · h/l prev/next · gg/G jump · yy copy · ? hint · e explain · r reset · q back",
+      ? "List: j/k move · enter start · gg/G jump · s settings · q quit"
+      : screen() === "settings"
+        ? "Settings: space/enter toggle · q/esc back"
+        : "Quiz: j/k move · space toggle/select · enter submit · h/l prev/next · gg/G jump · yy copy · ? hint · e explain · r reset · s settings · q back",
   );
 
   useKeyboard((key) => {
@@ -103,6 +117,11 @@ export function App(props: AppProps) {
 
     if (screen() === "quiz") {
       handleQuizKeys(key);
+      return;
+    }
+
+    if (screen() === "settings") {
+      handleSettingsKeys(key);
     }
   });
 
@@ -128,6 +147,10 @@ export function App(props: AppProps) {
   }
 
   function handleListKeys(key: KeyInput) {
+    if (key.name === "s") {
+      openSettings("list");
+      return;
+    }
     if (key.name === "q") {
       quitApp();
       return;
@@ -147,6 +170,10 @@ export function App(props: AppProps) {
   }
 
   function handleQuizKeys(key: KeyInput) {
+    if (key.name === "s") {
+      openSettings("quiz");
+      return;
+    }
     if (key.name === "q" || key.name === "escape") {
       setScreen("list");
       return;
@@ -202,6 +229,25 @@ export function App(props: AppProps) {
     }
   }
 
+  function openSettings(returnScreen: "list" | "quiz") {
+    setSettingsReturnScreen(returnScreen);
+    setScreen("settings");
+  }
+
+  function handleSettingsKeys(key: KeyInput) {
+    if (key.name === "q" || key.name === "escape" || key.name === "left" || key.name === "h") {
+      setScreen(settingsReturnScreen());
+      return;
+    }
+    if (key.name === "space" || key.name === "enter" || key.name === "return") {
+      setShuffleAnswers((enabled) => {
+        const next = !enabled;
+        createChoiceOrders(next);
+        return next;
+      });
+    }
+  }
+
   function startQuiz() {
     const nextQuiz = quiz();
     if (!nextQuiz) return;
@@ -211,6 +257,7 @@ export function App(props: AppProps) {
     }
     setScreen("quiz");
     setCurrentQuestionIndex(0);
+    createChoiceOrders(shuffleAnswers());
   }
 
   function resetQuiz() {
@@ -220,6 +267,25 @@ export function App(props: AppProps) {
     setExplanationShownByQuestion({});
     setSubmittedByQuestion({});
     setCurrentQuestionIndex(0);
+    createChoiceOrders(shuffleAnswers());
+  }
+
+  function createChoiceOrders(shouldShuffle: boolean) {
+    const quizValue = quiz();
+    if (!quizValue) return;
+    const orders: Record<number, number[]> = {};
+    quizValue.questions.forEach((quizQuestion, questionIndex) => {
+      const order = quizQuestion.choices.map((_, index) => index);
+      if (shouldShuffle) {
+        for (let index = order.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [order[index], order[swapIndex]] = [order[swapIndex]!, order[index]!];
+        }
+      }
+      orders[questionIndex] = order;
+    });
+    setChoiceOrderByQuestion(orders);
+    setCursorByQuestion({});
   }
 
   function goToQuestion(index: number) {
@@ -248,7 +314,8 @@ export function App(props: AppProps) {
   function copyCurrentQuestionToClipboard() {
     const q = question();
     if (!q) return;
-    const result = copyQuestionTextToClipboard(q.prompt, q.choices, choiceLabel);
+    const displayedChoices = currentChoiceOrder().map((index) => q.choices[index]!);
+    const result = copyQuestionTextToClipboard(q.prompt, displayedChoices, choiceLabel);
     if (result.ok) {
       showToast(`Copied question (${result.method}).`, "success");
       return;
@@ -264,7 +331,9 @@ export function App(props: AppProps) {
   function handleAnswerSelect(index: number) {
     const qIndex = currentQuestionIndex();
     setCursorByQuestion((prev) => ({ ...prev, [qIndex]: index }));
-    setAnswers((prev) => ({ ...prev, [qIndex]: [index] }));
+    const sourceIndex = currentChoiceOrder()[index];
+    if (sourceIndex === undefined) return;
+    setAnswers((prev) => ({ ...prev, [qIndex]: [sourceIndex] }));
   }
 
   function moveAnswerCursor(delta: number) {
@@ -286,8 +355,10 @@ export function App(props: AppProps) {
     const index = Math.min(Math.max(0, currentCursor()), q.choices.length - 1);
     setAnswers((prev) => {
       const current = prev[qIndex] ?? [];
-      const exists = current.includes(index);
-      const next = exists ? current.filter((value) => value !== index) : [...current, index];
+      const sourceIndex = currentChoiceOrder()[index];
+      if (sourceIndex === undefined) return prev;
+      const exists = current.includes(sourceIndex);
+      const next = exists ? current.filter((value) => value !== sourceIndex) : [...current, sourceIndex];
       return { ...prev, [qIndex]: next };
     });
     setSubmittedByQuestion((prev) => ({ ...prev, [qIndex]: false }));
@@ -312,8 +383,10 @@ export function App(props: AppProps) {
     const q = question();
     if (!q || !submitted()) return undefined;
     const answersForQuestion = currentAnswerIndices();
-    const shouldBeSelected = q.answerIndices.includes(index);
-    const isSelected = answersForQuestion.includes(index);
+    const sourceIndex = currentChoiceOrder()[index];
+    if (sourceIndex === undefined) return undefined;
+    const shouldBeSelected = q.answerIndices.includes(sourceIndex);
+    const isSelected = answersForQuestion.includes(sourceIndex);
     if (shouldBeSelected !== isSelected) return "#ef4444";
     if (shouldBeSelected) return "#22c55e";
     return undefined;
@@ -338,7 +411,11 @@ export function App(props: AppProps) {
     }
     const correct = isCorrectAnswer(q, currentAnswerIndices());
     const label = correct ? "Correct" : "Incorrect";
-    return `${label}. Correct answer: ${choiceListLabel(q.answerIndices)}.`;
+    const displayedCorrectIndices = q.answerIndices
+      .map((sourceIndex) => currentChoiceOrder().indexOf(sourceIndex))
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b);
+    return `${label}. Correct answer: ${choiceListLabel(displayedCorrectIndices)}.`;
   }
 
   function isMultiSelect() {
@@ -370,7 +447,7 @@ export function App(props: AppProps) {
       </box>
 
       <box width="100%" flexDirection="row" gap={1} flexGrow={1} minHeight={0}>
-        <Show when={screen() === "list"}>
+        <Show when={screen() === "list" || (screen() === "settings" && settingsReturnScreen() === "list")}>
           <ListScreen
             quizzes={props.quizzes}
             errors={props.errors}
@@ -384,7 +461,7 @@ export function App(props: AppProps) {
           />
         </Show>
 
-        <Show when={screen() === "quiz" && quiz() && question()}>
+        <Show when={(screen() === "quiz" || (screen() === "settings" && settingsReturnScreen() === "quiz")) && quiz() && question()}>
           <QuizScreen
             quiz={quiz()}
             question={question()}
@@ -392,7 +469,7 @@ export function App(props: AppProps) {
             questionCount={questionCount()}
             answeredCount={answeredCount()}
             currentCursor={currentCursor()}
-            currentAnswerIndices={currentAnswerIndices()}
+            currentAnswerIndices={currentAnswerIndices().map((sourceIndex) => currentChoiceOrder().indexOf(sourceIndex))}
             hintShown={hintShown()}
             explanationShown={explanationShown()}
             isMultiSelect={isMultiSelect()}
@@ -401,7 +478,12 @@ export function App(props: AppProps) {
             choiceLabel={choiceLabel}
             choiceFgColor={choiceFgColor}
             choiceBgColor={choiceBgColor}
+            choiceOrder={currentChoiceOrder()}
           />
+        </Show>
+
+        <Show when={screen() === "settings"}>
+          <SettingsScreen shuffleAnswers={shuffleAnswers()} />
         </Show>
       </box>
 

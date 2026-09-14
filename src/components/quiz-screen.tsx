@@ -18,6 +18,7 @@ type QuizScreenProps = {
   choiceLabel: (index: number) => string;
   choiceFgColor: (index: number) => string | undefined;
   choiceBgColor: (index: number) => string;
+  choiceOrder: number[];
 };
 
 export function QuizScreen(props: QuizScreenProps) {
@@ -30,13 +31,13 @@ export function QuizScreen(props: QuizScreenProps) {
           </text>
           <text width="100%" wrapMode="word">{props.question?.prompt}</text>
           <box flexDirection="column" gap={1} height="100%">
-            <For each={props.question?.choices ?? []}>
-              {(choice, index) => (
+            <For each={props.choiceOrder}>
+              {(choiceIndex, index) => (
                 <box backgroundColor={props.choiceBgColor(index())} paddingX={1} width="100%">
                   <text fg={props.choiceFgColor(index())}>
                     {props.currentCursor === index() ? "▶ " : "  "}
                     {props.isMultiSelect && (props.currentAnswerIndices.includes(index()) ? "[x]" : "[ ]")} {" "}
-                    {props.choiceLabel(index())} {choice}
+                    {props.choiceLabel(index())} {props.question?.choices[choiceIndex]}
                   </text>
                 </box>
               )}
