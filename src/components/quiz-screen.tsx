@@ -24,11 +24,11 @@ export function QuizScreen(props: QuizScreenProps) {
   return (
     <>
       <box width="65%" border borderStyle="single" borderColor="brightBlack" padding={1} gap={1}>
-        <box flexDirection="column" gap={1}>
+        <box width="100%" flexDirection="column" gap={1}>
           <text attributes={TextAttributes.BOLD}>
             {props.quiz?.title} · Question {props.currentQuestionIndex + 1} / {props.questionCount}
           </text>
-          <text wrapMode="word">{props.question?.prompt}</text>
+          <text width="100%" wrapMode="word">{props.question?.prompt}</text>
           <box flexDirection="column" gap={1} height="100%">
             <For each={props.question?.choices ?? []}>
               {(choice, index) => (

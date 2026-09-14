@@ -162,8 +162,6 @@ export function App(props: AppProps) {
     if (key.name === "space") {
       if (isMultiSelect()) {
         toggleCurrentChoice();
-      } else {
-        submitCurrentAnswer();
       }
       return;
     }
@@ -314,8 +312,10 @@ export function App(props: AppProps) {
     const q = question();
     if (!q || !submitted()) return undefined;
     const answersForQuestion = currentAnswerIndices();
-    if (q.answerIndices.includes(index)) return "#22c55e";
-    if (answersForQuestion.includes(index)) return "#ef4444";
+    const shouldBeSelected = q.answerIndices.includes(index);
+    const isSelected = answersForQuestion.includes(index);
+    if (shouldBeSelected !== isSelected) return "#ef4444";
+    if (shouldBeSelected) return "#22c55e";
     return undefined;
   }
 
