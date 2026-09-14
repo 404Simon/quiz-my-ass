@@ -1,23 +1,26 @@
 {
   "name": "quiz-my-ass",
+  "version": "1.0.0",
+  "description": "A fast keyboard-driven terminal quiz app",
   "module": "src/index.tsx",
   "type": "module",
-  "private": true,
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "node": ">=26.4.0"
+  },
   "scripts": {
-    "dev": "bun run --watch src/index.tsx"
+    "dev": "bun run --watch src/index.tsx",
+    "check": "tsc --noEmit",
+    "build": "bun run scripts/build.ts",
+    "prepack": "bun run check && bun run build"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.2"
-  },
-  "peerDependencies": {
+    "@types/bun": "^1.4.2",
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@babel/core": "^8.0.5",
-    "@babel/preset-typescript": "^8.0.1",
     "@opentui/core": "^0.5.11",
     "@opentui/solid": "^0.5.11",
-    "babel-preset-solid": "1.9.15",
     "solid-js": "1.9.15"
   }
 }
