@@ -43,6 +43,33 @@ bun install
 bun dev
 ```
 
+## Test
+
+```bash
+bun test
+```
+
+Use the `bun run test` script (or `bun test --preload @opentui/solid/preload`).
+Bun does not apply `bunfig.toml`'s top-level `preload` to the test runner, and it
+refuses to accept `preload` in both `bunfig.toml` and a `[test]` section, so the
+script passes it explicitly. Without it `solid-js` resolves to its SSR build and
+every test fails with `Orphan text error`.
+
+Layout:
+
+| Path | What it covers |
+|------|----------------|
+| `src/quiz-utils.test.ts` | Answer scoring and choice labels |
+| `src/quiz-loader.test.ts` | Quiz file validation, plus a check that everything in `quizzes/` loads cleanly |
+| `src/app.test.tsx` | Keyboard-driven UI on OpenTUI's in-memory test renderer |
+| `test/fixtures.ts` | Small in-memory quizzes, so a quiz-data edit cannot fail a UI test |
+| `test/harness.tsx` | `mountApp`, key helpers, and frame readers |
+
+UI tests drive the real terminal input parser via `mockInput`, so `escape`,
+arrows, and chords like `gg` are covered. They do not cover `yy`, which shells
+out to `wl-copy`/`xclip`/`xsel` and emits an OSC 52 escape, because the result
+depends on the host's clipboard tools.
+
 ## Build
 
 Build native executable(s):

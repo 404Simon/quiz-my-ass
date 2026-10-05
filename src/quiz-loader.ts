@@ -28,7 +28,7 @@ export function loadQuizzes(): LoadResult {
   return { quizzes, errors };
 }
 
-function normalizeQuiz(raw: unknown, sourcePath: string, errors: string[]): Quiz | null {
+export function normalizeQuiz(raw: unknown, sourcePath: string, errors: string[]): Quiz | null {
   if (!raw || typeof raw !== "object") {
     errors.push(`Quiz ${sourcePath} is not a JSON object.`);
     return null;

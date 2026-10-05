@@ -1,1 +1,7 @@
+# Applies to `bun dev` and `bun run build`.
+#
+# It also swaps Solid's server build for the client build, which is what makes
+# `<Show>` reactive. Bun refuses to accept `preload` in both this file and the
+# `[test]` section ("Cannot redefine key"), so `bun test` gets the same preload
+# via the `--preload` flag in package.json's `test` script. Keep them in sync.
 preload = ["@opentui/solid/preload"]
