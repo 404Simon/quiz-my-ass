@@ -437,9 +437,8 @@ export function App(props: AppProps) {
         border
         borderStyle="single"
         borderColor="brightBlue"
+        flexShrink={0}
         paddingX={1}
-        paddingTop={0}
-        paddingBottom={1}
       >
         <text attributes={TextAttributes.BOLD} wrapMode="word">
           {headerLine()}
@@ -491,9 +490,8 @@ export function App(props: AppProps) {
         border
         borderStyle="single"
         borderColor="brightBlack"
+        flexShrink={0}
         paddingX={1}
-        paddingTop={0}
-        paddingBottom={1}
       >
         <text attributes={TextAttributes.DIM} wrapMode="word">
           {footerLine()}
